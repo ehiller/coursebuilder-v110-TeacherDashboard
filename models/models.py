@@ -1631,7 +1631,9 @@ class EventEntity(BaseEntity):
     """
     recorded_on = db.DateTimeProperty(auto_now_add=True, indexed=True)
     source = db.StringProperty(indexed=False)
-    user_id = db.StringProperty(indexed=False)
+    ### CUSTOMIZATION ###
+    user_id = db.StringProperty(indexed=True) # changing indexed to True
+    ### END CUSTOMIZATION ###
 
     # Each of the following is a string representation of a JSON dict.
     data = db.TextProperty(indexed=False)

@@ -406,22 +406,22 @@ def notify_module_enabled():
     setattr(dashboard.DashboardHandler, 'post_teacher_reg', post_action)
 
     #add permissions for the dashboard sections
-    dashboard.DashboardHandler.add_external_permission(
-        ACCESS_ASSETS_PERMISSION, ACCESS_ASSETS_PERMISSION_DESCRIPTION)
-    dashboard.DashboardHandler.add_external_permission(
-        ACCESS_SETTINGS_PERMISSION, ACCESS_SETTINGS_PERMISSION_DESCRIPTION)
-    dashboard.DashboardHandler.add_external_permission(
-        ACCESS_ROLES_PERMISSION, ACCESS_ROLES_PERMISSION_DESCRIPTION)
-    dashboard.DashboardHandler.add_external_permission(
-        ACCESS_ANALYTICS_PERMISSION, ACCESS_ANALYTICS_PERMISSION_DESCRIPTION)
-    dashboard.DashboardHandler.add_external_permission(
-        ACCESS_SEARCH_PERMISSION, ACCESS_SEARCH_PERMISSION_DESCRIPTION)
-    dashboard.DashboardHandler.add_external_permission(
-        ACCESS_PEERREVIEW_PERMISSION, ACCESS_PEERREVIEW_PERMISSION_DESCRIPTION)
-    dashboard.DashboardHandler.add_external_permission(
-        ACCESS_SKILLMAP_PERMISSION, ACCESS_SKILLMAP_PERMISSION_DESCRIPTION)
-    dashboard.DashboardHandler.add_external_permission(
-        ACCESS_TEACHER_DASHBOARD_PERMISSION, ACCESS_TEACHER_DASHBOARD_PERMISSION_DESCRIPTION)
+    # dashboard.DashboardHandler.add_external_permission(
+    #     ACCESS_ASSETS_PERMISSION, ACCESS_ASSETS_PERMISSION_DESCRIPTION)
+    # dashboard.DashboardHandler.add_external_permission(
+    #     ACCESS_SETTINGS_PERMISSION, ACCESS_SETTINGS_PERMISSION_DESCRIPTION)
+    # dashboard.DashboardHandler.add_external_permission(
+    #     ACCESS_ROLES_PERMISSION, ACCESS_ROLES_PERMISSION_DESCRIPTION)
+    # dashboard.DashboardHandler.add_external_permission(
+    #     ACCESS_ANALYTICS_PERMISSION, ACCESS_ANALYTICS_PERMISSION_DESCRIPTION)
+    # dashboard.DashboardHandler.add_external_permission(
+    #     ACCESS_SEARCH_PERMISSION, ACCESS_SEARCH_PERMISSION_DESCRIPTION)
+    # dashboard.DashboardHandler.add_external_permission(
+    #     ACCESS_PEERREVIEW_PERMISSION, ACCESS_PEERREVIEW_PERMISSION_DESCRIPTION)
+    # dashboard.DashboardHandler.add_external_permission(
+    #     ACCESS_SKILLMAP_PERMISSION, ACCESS_SKILLMAP_PERMISSION_DESCRIPTION)
+    # dashboard.DashboardHandler.add_external_permission(
+    #     ACCESS_TEACHER_DASHBOARD_PERMISSION, ACCESS_TEACHER_DASHBOARD_PERMISSION_DESCRIPTION)
 
     #map permissions to actions
     #dashboard.DashboardHandler.map_action_to_permission('get_' + str(TeacherHandler.ACTION),
