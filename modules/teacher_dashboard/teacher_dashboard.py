@@ -14,6 +14,7 @@ import os
 import appengine_config
 
 from common import tags
+import logging
 from common import crypto
 
 from models import custom_modules
@@ -65,7 +66,7 @@ ACCESS_TEACHER_DASHBOARD_PERMISSION_DESCRIPTION = 'Can access the Teacher Dashbo
 custom_module = None
 
 
-class TeacherHandler(dashboard.DashboardHandler):
+class TeacherHandler():
     """Handler for everything under the Teacher tab in the CourseBuilder dashboard.
 
     Note:
@@ -87,78 +88,44 @@ class TeacherHandler(dashboard.DashboardHandler):
 
     XSRF_TOKEN_NAME = ''
 
+    # def get_teacher_dashboard(self):
+    #     """Process navigation requests sent to teacher handler. Routers to appropriate function."""
+
+    #     in_tab = self.request.get('tab') or self.DEFAULT_TAB
+    #     tab_action = self.request.get('tab_action') or None #defined a secondary tab property so I can go load a
+    #                                                         # separate view in the same tab
+
+    #     if in_tab == 'sections':
+    #         if tab_action == 'roster':
+    #             return self.get_roster()
+    #         else:
+    #             return self.get_sections()
+    #     elif in_tab == 'teacher_reg':
+    #         return self.get_teacher_reg()
+    #     elif in_tab == 'student_detail':
+    #         return self.get_student_dashboard()
+
     @classmethod
-    def register_tabs(cls):
-        """Handles registering all sub-navigation tabs"""
-
-        def get_action(handler):
-            """Redirects to teacher_dashboard."""
-            handler.redirect('/modules/teacher_dashboard?action=teacher_dashboard&tab=%s' % handler.request.get('tab') or
-                            TeacherHandler.DEFAULT_TAB)
-
-        dashboard.DashboardHandler.add_nav_mapping('teacher_dashboard', 'Teacher', placement=6000)
-
-        dashboard.DashboardHandler.add_sub_nav_mapping(
-            'teacher_dashboard', 'course_list', 'Course List', action='sections',
-            contents=get_action, placement=6000)
-
-        dashboard.DashboardHandler.add_sub_nav_mapping(
-            'teacher_dashboard', 'teacher_list', 'Teachers', action='edit_teachers',
-            contents=get_action, placement=6500)
-
-        def register_tab(key, label, handler, href=None):
-            """Registers tab using the tab registry"""
-            if href:
-                target = '_blank'
-            else:
-                href = 'dashboard?action=teacher_dashboard&tab=%s' % key
-                target = None
-
-            #tabs.Registry.register(
-            #    cls.ACTION, key, label, contents=handler, href=href, target=target
-            #)
-
-        #register_tab('sections', 'Sections', TeacherHandler)
-        #register_tab('student_detail', 'Student Dashboard', TeacherHandler)
-        #register_tab('teacher_reg', 'Teacher Workspace', TeacherHandler)
-
-    def get_teacher_dashboard(self):
-        """Process navigation requests sent to teacher handler. Routers to appropriate function."""
-
-        in_tab = self.request.get('tab') or self.DEFAULT_TAB
-        tab_action = self.request.get('tab_action') or None #defined a secondary tab property so I can go load a
-                                                            # separate view in the same tab
-
-        if in_tab == 'sections':
-            if tab_action == 'roster':
-                return self.get_roster()
-            else:
-                return self.get_sections()
-        elif in_tab == 'teacher_reg':
-            return self.get_teacher_reg()
-        elif in_tab == 'student_detail':
-            return self.get_student_dashboard()
-
-    def get_sections(self):
+    def get_sections(cls, dashboardHandler):
         """Renders Sections view. Javascript handles getting course sections and building the view"""
         template_values = {}
-        template_values['namespace'] = self.get_course()._namespace.replace('ns_', '')
+        template_values['namespace'] = dashboardHandler.get_course()._namespace.replace('ns_', '')
 
-        main_content = self.get_template(
+        main_content = dashboardHandler.get_template(
             'teacher_sections.html', [TEMPLATES_DIR]).render(template_values)
 
-        self.render_page({
-            'page_title': self.format_title('Sections'),
+        dashboardHandler.render_page({
+            'page_title': dashboardHandler.format_title('Sections'),
             'main_content': jinja2.utils.Markup(main_content)})
 
-    def get_student_dashboard(self):
+    def get_student_dashboard(cls, dashboardHandler):
         """Renders Student Dashboard view.
 
            Also gets ALL students in ALL course sections for the registered user to
            build a jQuery autocomplete dropdown on the view.
         """
 
-        student_email = self.request.get('student') or None #email will be in the request if opened from student list
+        student_email = dashboardHandler.request.get('student') or None #email will be in the request if opened from student list
                                                             # view, otherwise it will be None
 
         #need to go through every course section for the current user and get all unique students
@@ -177,7 +144,7 @@ class TeacherHandler(dashboard.DashboardHandler):
             student = Student.get_by_email(student_email)
 
         if (student):
-            course = self.get_course()
+            course = dashboardHandler.get_course()
             units = teacher_parsers.StudentProgressTracker.get_detailed_progress(student, course)
             scores = teacher_parsers.ActivityScoreParser.get_activity_scores([student.user_id], course)
         else:
@@ -185,7 +152,7 @@ class TeacherHandler(dashboard.DashboardHandler):
             scores = None
 
         #render the template for the student dashboard view
-        main_content = self.get_template(
+        main_content = dashboardHandler.get_template(
             'student_detailed_progress.html', [TEMPLATES_DIR]).render(
                 {
                     'units': units, #unit completion
@@ -195,13 +162,13 @@ class TeacherHandler(dashboard.DashboardHandler):
                 })
 
         #call DashboardHandler function to render the page
-        self.render_page({
-            'page_title': self.format_title('Student Dashboard'),
+        dashboardHandler.render_page({
+            'page_title': dashboardHandler.format_title('Student Dashboard'),
             'main_content': jinja2.utils.Markup(main_content)
         })
 
 
-    def get_roster(self):
+    def get_roster(cls, dashboardHandler):
         """Renders the Roster view. Displays all students in a single course section
 
            Also allows user to add students to a course section
@@ -213,14 +180,14 @@ class TeacherHandler(dashboard.DashboardHandler):
 
         #need list of units and lessons for select elements that determine which progress value to display
         #need a list of units, need the titles, unit ids, types
-        units = self.get_course().get_units()
+        units = dashboardHandler.get_course().get_units()
         units_filtered = filter(lambda x: x.type == 'U', units) #filter out assessments
         template_values['units'] = units_filtered
 
         #need to get lessons, but only for units that aren't assessments
         lessons = {}
         for unit in units_filtered:
-            unit_lessons = self.get_course().get_lessons(unit.unit_id)
+            unit_lessons = dashboardHandler.get_course().get_lessons(unit.unit_id)
             unit_lessons_filtered = []
             for lesson in unit_lessons:
                 unit_lessons_filtered.append({
@@ -232,7 +199,7 @@ class TeacherHandler(dashboard.DashboardHandler):
         template_values['lessons'] = transforms.dumps(lessons, {}) #passing in JSON to template so it can be used
                                                                     # in JavaScript
 
-        course_section_id = self.request.get('section')
+        course_section_id = dashboardHandler.request.get('section')
 
         course_section = teacher_entity.CourseSectionEntity.get_course_for_user(course_section_id)
         students = {}
@@ -246,11 +213,11 @@ class TeacherHandler(dashboard.DashboardHandler):
                 temp_student['unit_completion'] = teacher_parsers.StudentProgressTracker.get_unit_completion(
                     Student.get_by_email(
                     student[
-                    'email']), self.get_course())
+                    'email']), dashboardHandler.get_course())
                 temp_student['course_completion'] = teacher_parsers.StudentProgressTracker.get_overall_progress(Student.get_by_email(student[
-                    'email']), self.get_course())
+                    'email']), dashboardHandler.get_course())
                 temp_student['detailed_course_completion'] = teacher_parsers.StudentProgressTracker.get_detailed_progress(
-                    Student.get_by_email(student['email']), self.get_course())
+                    Student.get_by_email(student['email']), dashboardHandler.get_course())
                 temp_student['email'] = student['email']
                 temp_student['name'] = student['name']
 
@@ -260,22 +227,22 @@ class TeacherHandler(dashboard.DashboardHandler):
 
         #passing in students as JSON so JavaScript can handle updating completion values easier
         template_values['students_json'] = transforms.dumps(course_section.students, {})
-        template_values['namespace'] = self.get_course()._namespace.replace('ns_', '')
+        template_values['namespace'] = dashboardHandler.get_course()._namespace.replace('ns_', '')
 
         if course_section:
             template_values['section'] = course_section
 
         #render student_list.html for Roster view
-        main_content = self.get_template(
+        main_content = dashboardHandler.get_template(
             'student_list.html', [TEMPLATES_DIR]).render(template_values)
 
         #DashboardHandler renders the page
-        self.render_page({
-            'page_title': self.format_title('Student List'),
+        dashboardHandler.render_page({
+            'page_title': dashboardHandler.format_title('Student List'),
             'main_content': jinja2.utils.Markup(main_content)})
 
-
-    def get_teacher_reg(self):
+    @classmethod
+    def get_teacher_reg_with_alerts(cls, dashboardHandler, alerts):
         """Renders Teacher Workspace view. Displays form to add or update a teacher
 
            Also displays all registered teachers.
@@ -284,35 +251,40 @@ class TeacherHandler(dashboard.DashboardHandler):
         alerts = []
         disable_form = False
 
-        if not roles.Roles.is_course_admin(self.app_context):
+        if not roles.Roles.is_course_admin(dashboardHandler.app_context):
             alerts.append('Access denied. Please contact a course admin.')
             disable_form = True
 
         template_values = {}
-        template_values['teacher_reg_xsrf_token'] = self.create_xsrf_token('teacher_reg')
+        template_values['alert_messages'] = '\n'.join(alerts)
+        template_values['teacher_reg_xsrf_token'] = dashboardHandler.create_xsrf_token('teacher_reg')
 
         template_values['teachers'] = teacher_entity.Teacher.get_all_teachers_for_course()
         template_values['alert_messages'] = alerts
         template_values['disable'] = disable_form
-        template_values['action'] = self.get_action_url('teacher_reg')
+        template_values['action'] = dashboardHandler.get_action_url('teacher_reg')
 
-        main_content = self.get_template(
+        main_content = dashboardHandler.get_template(
             'teacher_registration.html', [TEMPLATES_DIR]).render(template_values)
 
-        self.render_page({
-            'page_title': self.format_title('Teacher Registration'),
+        dashboardHandler.render_page({
+            'page_title': dashboardHandler.format_title('Teacher Registration'),
             'main_content': jinja2.utils.Markup(main_content)})
 
     @classmethod
-    def post_teacher_reg(cls, handler):
+    def get_teacher_reg(cls, dashboardHandler):
+        TeacherHandler.get_teacher_reg_with_alerts(dashboardHandler, None)
+
+    @classmethod
+    def post_teacher_reg(cls, dashboardHandler):
         """Handles form submit for teacher registration"""
 
         #get values entered on form
-        email = handler.request.get('email').strip()
-        school = handler.request.get('school')
+        email = dashboardHandler.request.get('email').strip()
+        school = dashboardHandler.request.get('school')
 
         #getting checkbox value is a little weird, might look different depending on browser
-        active = handler.request.get('active-teacher')
+        active = dashboardHandler.request.get('active-teacher')
         if active == 'on' or len(active) > 0:
             active = True
         else:
@@ -323,11 +295,13 @@ class TeacherHandler(dashboard.DashboardHandler):
         #keep track of any errors we might want to pass back to the UI
         alerts = []
 
+        logging.debug('***** Got to post teacher reg')
+
         #check to see if a teacher already exists
         if teacher:
             template_values = {}
 
-            template_values['teacher_reg_xsrf_token'] = handler.create_xsrf_token('teacher_reg')
+            template_values['teacher_reg_xsrf_token'] = dashboardHandler.create_xsrf_token('teacher_reg')
 
             sections = {}
 
@@ -357,43 +331,40 @@ class TeacherHandler(dashboard.DashboardHandler):
             if len(alerts) == 0:
                 alerts.append('Teacher was successfully updated')
 
-            #render teacher_registration.html for view, pass alerts in
-            template_values['alert_messages'] = '\n'.join(alerts)
-            main_content = handler.get_template(
-                'teacher_registration.html', [TEMPLATES_DIR]).render(template_values)
-
-            #DashboardHandler renders the page
-            handler.render_page({
-                'page_title': handler.format_title('Teacher Dashboard'),
-                'main_content': jinja2.utils.Markup(main_content)
-                },
-                'teacher_dashboard'
-            )
+            TeacherHandler.get_teacher_reg_with_alerts(dashboardHandler, alerts)
         else:
+            logging.debug('***** Got to add new teacher branch')
+
             #go for it if teacher doesn't already exist
             teacher_entity.Teacher.add_new_teacher_for_user(email, school, '', alerts)
 
-            template_values = {}
+            TeacherHandler.get_teacher_reg_with_alerts(dashboardHandler, alerts)
 
-            template_values['alert_messages'] = '\n'.join(alerts)
-            template_values['teacher_reg_xsrf_token'] = handler.create_xsrf_token('teacher_reg')
-            main_content = handler.get_template(
-                'teacher_registration.html', [TEMPLATES_DIR]).render(template_values)
 
-            #DashboardHandler renders the page
-            handler.render_page({
-                'page_title': handler.format_title('Teacher Dashboard'),
-                'main_content': jinja2.utils.Markup(main_content)
-                },
-                'teacher_dashboard'
-            )
+def register_tabs():
+    """Handles registering all sub-navigation tabs"""
 
+    #need to register high level mapping
+    dashboard.DashboardHandler.add_nav_mapping('teacher_dashboard', 'Teacher', placement=6000)
+
+    #need to register sub level mappings
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'teacher_dashboard', 'course_list', 'Section List', action='sections',
+        contents=TeacherHandler.get_sections, placement=6000)
+
+    # dashboard.DashboardHandler.add_sub_nav_mapping(
+    #     'teacher_dashboard', 'student_dashboard', 'Student Dashboard', action='student_dashboard',
+    #     contents=TeacherHandler.get_student_dashboard, placement=6100)
+
+    dashboard.DashboardHandler.add_sub_nav_mapping(
+        'teacher_dashboard', 'teacher_list', 'Teacher List', action='edit_teachers',
+        contents=TeacherHandler.get_teacher_reg, placement=6500)
 
 def notify_module_enabled():
     """Handles things after module has been enabled."""
 
-    def post_action(handler):
-        TeacherHandler.post_teacher_reg(handler)
+    # def post_action(handler):
+    #     TeacherHandler.post_teacher_reg(handler)
 
     #dashboard.DashboardHandler.add_nav_mapping(
     #    TeacherHandler.ACTION, 'Teacher')
@@ -402,8 +373,7 @@ def notify_module_enabled():
     #setattr(dashboard.DashboardHandler, 'get_teacher_dashboard', get_action)
 
     #add post actions
-    dashboard.DashboardHandler.add_custom_post_action('teacher_reg', post_action)
-    setattr(dashboard.DashboardHandler, 'post_teacher_reg', post_action)
+    dashboard.DashboardHandler.add_custom_post_action('teacher_reg', TeacherHandler.post_teacher_reg)
 
     #add permissions for the dashboard sections
     # dashboard.DashboardHandler.add_external_permission(
@@ -456,7 +426,7 @@ def notify_module_enabled():
     transforms.CUSTOM_JSON_ENCODERS.append(teacher_entity.CourseSectionEntity.json_encoder)
 
     #register tabs
-    TeacherHandler.register_tabs()
+    register_tabs()
 
 
 def register_module():
@@ -489,3 +459,6 @@ def register_module():
         notify_module_enabled=notify_module_enabled)
 
     return custom_module
+
+
+

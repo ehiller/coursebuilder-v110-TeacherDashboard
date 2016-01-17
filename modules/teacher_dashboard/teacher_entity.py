@@ -31,6 +31,17 @@ from common import utils as common_utils
 # we cache this object below.
 NO_OBJECT = {}
 
+def dump(obj):
+  '''return a printable representation of an object for debugging'''
+  newobj=obj
+  if '__dict__' in dir(obj):
+    newobj=obj.__dict__
+    if ' object at ' in str(obj) and not newobj.has_key('__type__'):
+      newobj['__type__']=str(obj)
+    for attr in newobj:
+      newobj[attr]=dump(newobj[attr])
+  return newobj
+
 class Teacher(BaseEntity):
     """Teacher data specific to a course instance, modeled after the student Entity"""
     enrolled_on = db.DateTimeProperty(auto_now_add=True, indexed=True)
@@ -206,7 +217,10 @@ class TeacherProfileDAO(object):
     def add_new_teacher_for_user(
             cls, email,  school, additional_fields, alerts):
 
-        student_by_email = Student.get_by_email(email)
+        student_by_first_email = Student.get_first_by_email(email)
+        student_by_email = student_by_first_email[0]
+
+        logging.info(dump(student_by_email))
 
         if not student_by_email:
             alerts.append('This email is not registered as a student for this course')
